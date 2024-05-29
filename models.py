@@ -9,5 +9,5 @@ class Student(Base):
     name = Column(String, index=True)
     gender = Column(String)
     branch = Column(String)
-    year = Column(String)
+    year = Column(Integer)
     image = Column(LargeBinary)
