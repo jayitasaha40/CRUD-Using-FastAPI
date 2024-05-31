@@ -18,6 +18,7 @@ class Branch(str, Enum):
     ee = "EE"
     me = "ME"
     ce = "CE"
+    bme = "BME"
 
 # Pydantic model for request data
 class StudentCreate(BaseModel):
