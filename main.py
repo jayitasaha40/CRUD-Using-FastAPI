@@ -143,30 +143,164 @@ elif option == "Delete Student":
         else:
             st.error(f"Failed to delete student: {response.json().get('detail')}")
 
+
+
+
+
+import streamlit as st
+import requests
+import pandas as pd
+from urllib.parse import urlencode
+
+def set_url_params(**params):
+    query = urlencode(params)
+    st.experimental_set_query_params(**params)
+
+
 if option == "View List":
     st.subheader("📄 View list of all students")
     st.image("Images/list.png")
+    st.button("Refresh")
     response = requests.get(f"{base_url}/studentlist/")
     if response.status_code == 200:
         student_list = response.json()
         df = pd.DataFrame(student_list)
         df['year'] = df['year'].astype(str)
 
-        # Add a column for image URLs, assuming your API provides them or you have a mapping function
+        # Add a column for image URLs
         df['Image'] = df['id'].apply(lambda x: f"{base_url}/students/{x}/image")
 
-        # Display the table with images using st.data_editor
-        st.data_editor(
-            df,
-            column_config={
-                "Image": st.column_config.ImageColumn(
-                    "Student Image", help="Click to view student image"
-                )
-            },
-            hide_index=True,
-        )
+        # Create HTML table with buttons
+        html_table = """
+        <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>Department</th>
+            <th>Year</th>
+            <th>Image</th>
+            <th>Update</th>
+            <th>Delete</th>
+        </tr>
+        </thead>
+        <tbody>
+        """
 
+        for _, row in df.iterrows():
+            html_table += "<tr>"
+            for col in df.columns:
+                if col == "Image":
+                    html_table += f'<td><img src="{row[col]}" width="50"></td>'
+                else:
+                    html_table += f"<td>{row[col]}</td>"
+
+            html_table += f"""
+                <td>
+                    <button class="update-btn" data-id="{row['id']}">Update</button>
+                </td>
+                <td>
+                    <button class="delete-btn" data-id="{row['id']}">Delete</button>
+                </td>
+            """
+            html_table += "</tr>"
+
+        html_table += """
+        </tbody>
+        </table>
+
+        <script>
+        const baseUrl = '""" + base_url + """';
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const updateButtons = document.querySelectorAll('.update-btn');
+            const deleteButtons = document.querySelectorAll('.delete-btn');
+
+            updateButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    document.getElementById('update-form').style.display = 'block';
+                    document.getElementById('student-id').value = id;
+                });
+            });
+
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    alert('Delete button clicked for ID: ' + id); // Debugging alert
+                    fetch(`${baseUrl}/studentdelete/${id}`, {
+                        method: 'DELETE'
+                    }).then(response => {
+                        if (response.ok) {
+                            alert('Delete successful');
+                            window.location.reload();
+                        } else {
+                            alert('Delete failed');
+                        }
+                    }).catch(error => {
+                        alert('Delete error: ' + error);
+                    });
+                });
+            });
+        });
+
+        function handleSave() {
+            const id = document.getElementById('student-id').value;
+            const branch = document.getElementById('branch').value;
+            const image = document.getElementById('image').files[0];
+
+            const formData = new FormData();
+            if (branch) {
+                formData.append('branch', branch);
+            }
+            if (image) {
+                formData.append('image', image);
+            }
+
+            fetch(`${baseUrl}/students/${id}`, {
+                method: 'PUT',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    alert('Update successful');
+                    window.location.reload();
+                } else {
+                    alert('Update failed');
+                }
+            }).catch(error => {
+                alert('Update error: ' + error);
+            });
+        }
+        </script>
+        """
+
+        html_form = """
+        <div id="update-form" style="display:none;">
+            <h3>Update Student</h3>
+            <input type="hidden" id="student-id" />
+            <label for="branch">Branch:</label>
+            <select id="branch">
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="EE">EE</option>
+                <!-- Add other branches as needed -->
+            </select>
+            <br>
+            <label for="image">Image:</label>
+            <input type="file" id="image" accept="image/*">
+            <br>
+            <button onclick="handleSave()">Save</button>
+        </div>
+        """
+
+       
+        # Combine table and form
+        html_content = html_table + html_form
+
+        # Render HTML table and form using Streamlit components
+        st.components.v1.html(html_content, height=800)
     else:
         st.error(f"Failed to fetch student list: {response.json().get('detail')}")
 
-
+   

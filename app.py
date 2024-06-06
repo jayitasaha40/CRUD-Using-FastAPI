@@ -3,6 +3,7 @@ from typing import List, Optional
 from fastapi import FastAPI, Depends, Form, HTTPException, File, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from sqlalchemy import create_engine, Column, Integer, String, LargeBinary
 import sqlalchemy
@@ -17,6 +18,20 @@ import face_recognition
 
 # FastAPI app instance
 app = FastAPI()
+
+origins = [
+    "http://localhost",  # adjust as needed
+    "http://localhost:8501",  # Streamlit default port
+    "http://example.com"  # replace with your domain if different
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
